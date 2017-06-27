@@ -1,24 +1,16 @@
 var Calculadora = {
   display : document.getElementById('display'),
   operator: "",
-  firstValue: 0,
-  secondValue: 0,
-  resultValue: 0,
+  firstValue: "",
+  secondValue: "",
+  resultValue: "",
+  executedEqual: false,
   init : function(){
-    // operator = "";
-    // firstValue = 0;
-    // secondValue = 0;
-    // resultValue = 0;
     this.listenKeyClick();
   },
   listenKeyClick: function(){
     var self = this;
     var keys = document.querySelectorAll(".tecla");
-    var maxLengthCheckFunction = this.maxLengthCheck;
-    var addDecimalPointFunction = this.addDecimalPoint;
-    var addSubtractionSignFunction = this.addSubtractionSign;
-    var processOperationFunction = this.processOperation;
-    var setDisplayToZeroFunction = this.setDisplayToZero;
     for (var i = 0; i < keys.length; i++) {
       keys[i].addEventListener('click', function(e) {
           e.preventDefault()
@@ -33,7 +25,7 @@ var Calculadora = {
         keys[i].addEventListener('click', function(e) {
             e.preventDefault();
             var key = this;
-            maxLengthCheckFunction(function(){
+            self.maxLengthCheck(function(){
               if(display.textContent != "0"){
                 display.append(key.id);
               }else if(display.textContent == "0" && parseInt(key.id) != 0){
@@ -43,71 +35,90 @@ var Calculadora = {
         });
       }else if(keys[i].id == "on"){
         keys[i].addEventListener('click', function(){
-          setDisplayToZeroFunction(self);
+          self.setDisplayToZero(self);
         });
       }else if (keys[i].id == "punto") {
         keys[i].addEventListener('click', function(){
-          maxLengthCheckFunction(addDecimalPointFunction);
+          self.maxLengthCheck(self.addDecimalPoint);
         });
       }else if (keys[i].id == "sign") {
         keys[i].addEventListener('click', function(){
-          maxLengthCheckFunction(addSubtractionSignFunction);
+          self.maxLengthCheck(self.addSubtractionSign);
         });
       }else if (keys[i].id == "dividido"
                 || keys[i].id == "por"
                 || keys[i].id == "menos"
-                || keys[i].id == "mas"
-                || keys[i].id == "igual") {
+                || keys[i].id == "mas") {
         keys[i].addEventListener('click', function(){
-            processOperationFunction(self, this);
+            self.processOperation(self, this.id);
+        });
+      }else if (keys[i].id == "igual") {
+        keys[i].addEventListener('click', function(){
+            self.processEqual(self);
         });
       }
     }
   },
-  processOperation: function(self, element) {
-    console.log(self.operator);
-    if(self.operator != "" && self.operator != undefined){
-      self.secondValue = self.display.textContent;
-      switch (self.operator) {
-        case "mas":
-            self.resultValue = self.processSum(self.firstValue, self.secondValue);
-          break;
-        case "menos":
-              self.resultValue = self.processSubtract(self.firstValue, self.secondValue);
-            break;
-        case "por":
-              self.resultValue = self.processMultiplication(self.firstValue, self.secondValue);
-              break;
-        case "dividido":
-              self.resultValue = self.processDivision(self.firstValue, self.secondValue);
-              break;
-        default:
-          console.log("Ninguna accion");
+  processEqual: function(self){
+    if(!self.executedEqual){
+        self.secondValue = self.display.textContent;
+        self.executedEqual = true;
+    }
+    self.executeOperation(self);
+
+    if(self.resultValue.length >= 8){
+      self.resultValue = self.resultValue.substr(0,8);
+      var toPrecisionValue;
+      if(self.resultValue.search("\\.") != -1){
+        toPrecisionValue = 8 - self.resultValue.search("\\.");
       }
-      self.firstValue = self.resultValue;
-      // console.log("Resultado parcial:"+self.resultValue);
-    }else{
+      if(toPrecisionValue!=undefined){
+        self.resultValue = Number(self.resultValue).toPrecision(toPrecisionValue);
+      }
+    }
+    self.display.textContent = self.resultValue;
+    self.firstValue = self.resultValue;
+  },
+  processOperation: function(self, operator) {
+    if(self.operator=="" || self.executedEqual){
+        if(self.executedEqual){
+          self.executedEqual = false;
+        }
+        self.operator = operator;
         self.firstValue = self.display.textContent;
-    }
-
-    if(element.id == "igual"){
-        self.display.textContent = self.resultValue;
-    }else{
         self.display.textContent = "";
-        self.operator = element.id;
+    }else{
+      self.secondValue = self.display.textContent;
+      self.executeOperation(self);
+      self.firstValue = self.resultValue;
+      self.display.textContent = "";
+      self.operator = operator;
     }
-
-    // console.log(self.operator);
-    // console.log(self.firstValue);
-    // console.log(self.secondValue);
-    // console.log(self.display);
+  },
+  executeOperation: function(self){
+    switch (self.operator) {
+      case "mas":
+        self.resultValue = self.processSum(self.firstValue, self.secondValue);
+        break;
+      case "menos":
+        self.resultValue = self.processSubtract(self.firstValue, self.secondValue);
+        break;
+      case "por":
+        self.resultValue = self.processMultiplication(self.firstValue, self.secondValue);
+        break;
+      case "dividido":
+        self.resultValue = self.processDivision(self.firstValue, self.secondValue);
+        break;
+      default:
+        console.log("Ninguna accion");
+    }
   },
   setDisplayToZero: function(self){
     self.display.innerHTML = "0";
-    self.resultValue = 0;
-    self.firstValue = 0;
-    self.secondValue = 0;
+    self.secondValue = "";
+    self.firstValue = "";
     self.operator = "";
+    self.executedEqual = false;
   },
   addDecimalPoint: function(){
     if(display.textContent.search("\\.") == -1){
@@ -129,16 +140,16 @@ var Calculadora = {
     }
   },
   processSum: function(firstValue, secondValue){
-    return (Number(firstValue) + Number(secondValue));
+    return (Number(firstValue) + Number(secondValue)).toString();
   },
   processSubtract: function(firstValue, secondValue){
-    return (Number(firstValue) - Number(secondValue));
+    return (Number(firstValue) - Number(secondValue)).toString();
   },
   processMultiplication: function(firstValue, secondValue){
-    return (Number(firstValue) * Number(secondValue));
+    return (Number(firstValue) * Number(secondValue)).toString();
   },
   processDivision: function(firstValue, secondValue){
-    return (Number(firstValue) / Number(secondValue));
+    return (Number(firstValue) / Number(secondValue)).toString();
   }
 }
 
